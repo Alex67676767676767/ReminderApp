@@ -1,7 +1,16 @@
 import sqlite3
 import os
+import sys
 
-DB_NAME = "reminder.db"
+# Умный путь: если запущен как EXE, сохраняем базу рядом с ним. Если в PyCharm - в папке проекта.
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+DB_NAME = os.path.join(application_path, "reminder.db")
+
+# ... дальше идет твоя функция init_db() и остальной код без изменений ...
 
 
 def init_db():

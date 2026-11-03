@@ -182,3 +182,10 @@ cython_debug/
 build/
 dist/
 *.spec
+mailer.py
+mailer.py
+mailer.py
+reminder.db
+mailer.py
+reminder.db
+mailer.py

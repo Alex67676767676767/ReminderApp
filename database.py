@@ -1,8 +1,8 @@
 import sqlite3
 import os
 import sys
+import json
 
-# Умный путь: если запущен как EXE, сохраняем базу рядом с ним. Если в PyCharm - в папке проекта.
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
 else:
@@ -10,15 +10,15 @@ else:
 
 DB_NAME = os.path.join(application_path, "reminder.db")
 
-# ... дальше идет твоя функция init_db() и остальной код без изменений ...
+
 
 
 def init_db():
-    """Создает таблицы, если их еще нет"""
+
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # Таблица пользователей
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +27,7 @@ def init_db():
         )
     ''')
 
-    # Таблица напоминаний
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS reminders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,3 +61,23 @@ def get_user_reminders(user_id):
     reminders = cursor.fetchall()
     conn.close()
     return reminders
+
+
+def export_reminders_to_json(user_id):
+    """Экспортирует напоминания пользователя в JSON файл"""
+    reminders = get_user_reminders(user_id)
+
+    data = []
+    for r_id, title, dt in reminders:
+        data.append({
+            "id": r_id,
+            "title": title,
+            "datetime": dt
+        })
+
+    filename = f"reminders_export_user_{user_id}.json"
+    with open(filename, "w", encoding="utf-8") as f:
+        # ensure_ascii=False нужен, чтобы русские буквы сохранялись нормально, а не в виде \u0430\u0431...
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+    return filename

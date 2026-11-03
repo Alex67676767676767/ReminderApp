@@ -1,13 +1,14 @@
 import sys
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QListWidgetItem, QSystemTrayIcon
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor  # Для создания иконки
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtCore import Qt
-from qfluentwidgets import (FluentWindow, PrimaryPushButton, setTheme, Theme,
-                            FluentIcon, SubtitleLabel, ListWidget)
-from database import init_db, get_user_reminders
+from qfluentwidgets import (FluentWindow, PrimaryPushButton, PushButton, setTheme, Theme,
+                            FluentIcon, SubtitleLabel, ListWidget, InfoBar)
+from database import init_db, get_user_reminders, export_reminders_to_json
 from login_window import LoginWindow
 from reminder_dialog import ReminderDialog
 from scheduler import NotificationManager
+from logger import log
 
 
 class MainWindow(FluentWindow):
@@ -27,14 +28,22 @@ class MainWindow(FluentWindow):
 
         self.titleLabel = SubtitleLabel("Мои напоминания")
         self.btn = PrimaryPushButton(FluentIcon.ADD, "Добавить напоминание")
+
+        # Наша новая кнопка экспорта
+        self.btn_export = PushButton(FluentIcon.SAVE, "Экспорт в JSON")
+
         self.listWidget = ListWidget()
 
         self.vBoxLayout.addWidget(self.titleLabel)
         self.vBoxLayout.addWidget(self.btn)
+        self.vBoxLayout.addWidget(self.btn_export)  # Добавляем кнопку на экран
         self.vBoxLayout.addWidget(self.listWidget)
 
         self.addSubInterface(self.homeWidget, FluentIcon.HOME, "Главная")
+
+        # Привязка кнопок
         self.btn.clicked.connect(self.open_add_dialog)
+        self.btn_export.clicked.connect(self.export_data)
 
         self.load_reminders()
 
@@ -53,6 +62,24 @@ class MainWindow(FluentWindow):
             self.listWidget.addItem(item)
             self.notifier.schedule_reminder(title, dt)
 
+        log.info(f"Загружено {len(reminders)} напоминаний из базы для пользователя ID {self.user_id}")
+
+    def export_data(self):
+        try:
+            filename = export_reminders_to_json(self.user_id)
+            log.info(f"Пользователь {self.user_id} сделал экспорт в файл {filename}")
+
+            # Показываем красивое зеленое окно об успехе
+            InfoBar.success(
+                title="Экспорт завершен",
+                content=f"Данные сохранены в файл: {filename}",
+                parent=self,
+                duration=3000
+            )
+        except Exception as e:
+            log.error(f"Ошибка экспорта: {e}")
+            InfoBar.error(title="Ошибка", content=str(e), parent=self)
+
 
 # Функция для создания простой иконки
 def create_app_icon():
@@ -68,13 +95,16 @@ def create_app_icon():
 
 if __name__ == '__main__':
     init_db()
+
+    log.info("=========================================")
+    log.info("ЗАПУСК ПРИЛОЖЕНИЯ ЕЖЕДНЕВНИК")
+    log.info("=========================================")
+
     app = QApplication(sys.argv)
 
-    # Устанавливаем иконку для всего приложения
     app_icon = create_app_icon()
     app.setWindowIcon(app_icon)
 
-    # Создаем иконку в трее с нашей картинкой
     tray_icon = QSystemTrayIcon(app_icon, app)
     tray_icon.setToolTip("Ежедневник запущен")
     tray_icon.show()
